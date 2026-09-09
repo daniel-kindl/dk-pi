@@ -2,23 +2,31 @@
 
 Pi extensions for Daniel Kindl projects. The first extension is `dk-flow`.
 
-## dk-flow V0
+## dk-flow
 
-`dk-flow` keeps one explicit work session around Pi. It detects the Git repository, loads a GitHub issue with `gh`, creates a feature branch when the current branch is `main` or `dev`, and injects short session context before Pi turns.
+`dk-flow` keeps one explicit issue work session around Pi. It detects the Git repository, loads a GitHub issue with `gh`, creates a work branch, and injects issue context before Pi turns.
 
-Install or use this repository as a trusted Pi project. The project-local extension is at `.pi/extensions/dk-flow/index.ts`. Start Pi in the repository, then run:
+Use the project-local extension from a trusted Pi session:
 
 ```text
-/work 47
+/work 1
 /work status
 /work check
-/work abort
+/work finish
 ```
 
-`/work check` runs `lint`, `test`, and `build` scripts found in `package.json`, in that order. It records pass or failure. GitHub access requires an authenticated `gh` CLI.
+`/work check` runs `lint`, `test`, and `build` scripts found in `package.json`, in that order. GitHub access requires an authenticated `gh` CLI.
 
-State is stored as Pi session entries. On restore, dk-flow re-reads the current Git repository. Git and GitHub remain authoritative for external state.
+## PR lifecycle
 
-V0 blocks file and Git commit/push/merge tool calls when the active work branch is protected. A dirty protected branch is not changed. Merge permission is always separate from validation: passing checks never grants permission to merge. `/work abort` clears only logical session state and does not delete branches or files.
+`/work finish` requires a clean session on its work branch and successful local checks. It creates a Conventional Commit when changes exist, pushes the branch, and creates or reuses a PR against the session base branch. It does not merge. Repeating the command reuses a matching PR.
 
-V0 does not yet create PRs, merge, or perform post-merge cleanup. The state model reserves these lifecycle fields for safe future implementation. Validation detection is currently limited to `package.json` scripts.
+The session records PR, head SHA, and CI state. `/work status` refreshes mutable PR data from GitHub. CI success and merge permission are separate. CI success never grants merge permission.
+
+A clear maintainer instruction such as `green-go` or `merge it` grants approval only for the current PR head SHA. A new PR head clears approval. Use `/work merge` after approval. dk-flow then rechecks the open PR, base and head branches, issue link, head SHA, CI, mergeability, and blocking review state before it sends the merge request. GitHub must confirm the merge before cleanup starts.
+
+After a confirmed merge, cleanup switches to the base branch, updates it with fast-forward-only pull, confirms the work branch is merged, deletes the local branch safely, and removes the remote branch when it still exists. It then clears the session. If a cleanup step fails, the session remains with `cleanup = incomplete` so the failure is visible and can be retried. No force deletion is used.
+
+`/work abort` clears only logical session state. It does not delete branches or files. Session entries persist state across normal Pi restore. Git and GitHub remain authoritative for external facts.
+
+V0 limitations: check detection supports `package.json` only; merge uses GitHub CLI squash merge; there is no automatic CI polling, review assistant, release workflow, or Wayfinder automation. Merge approval is accepted from explicit input phrases and is never inferred from approval-like comments such as `looks good`, `nice`, or `ready`.
