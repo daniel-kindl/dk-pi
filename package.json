@@ -1,0 +1,7 @@
+{
+  "name": "dk-pi",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --experimental-strip-types --test test/*.test.ts" },
+  "devDependencies": { "@earendil-works/pi-coding-agent": "0.85.1" }
+}
